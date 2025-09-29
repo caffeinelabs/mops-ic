@@ -1,8 +1,8 @@
 [package]
-name = "ic"
+name = "motoko-mgmt-canister"
 version = "3.2.0"
 description = "IC management canister interface (aaaaa-aa)"
-repository = "https://github.com/ZenVoich/ic"
+repository = "https://github.com/dfinity/motoko-mgmt-canister"
 keywords = [ "ic", "types", "interface", "http" ]
 license = "MIT"
 
