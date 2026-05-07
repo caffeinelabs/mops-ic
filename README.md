@@ -3,7 +3,7 @@
 [![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/ic)](https://mops.one/ic)
 [![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/ic)](https://mops.one/ic/docs)
 
-Based on https://github.com/dfinity/portal/blob/master/docs/references/_attachments/ic.did
+Motoko interface for the IC management canister (`aaaaa-aa`). The Motoko types are generated from the upstream Candid spec mirrored at [`did/ic.did`](./did/ic.did) (from [`dfinity/portal`](https://github.com/dfinity/portal/blob/master/docs/references/_attachments/ic.did)).
 
 See [Call](https://mops.one/ic/docs/Call) module documentation for automatic calculation of the minimum amount of cycles and attaching them to the call.
 
@@ -11,20 +11,18 @@ See [Call](https://mops.one/ic/docs/Call) module documentation for automatic cal
 
 ### Import
 ```motoko
-import IC "mo:ic";
-let ic = actor("aaaaa-aa") : IC.Service;
+import { ic } "mo:ic";
+import IC "mo:ic/Types";
 ```
-or
-```motoko
-import {ic} "mo:ic";
-```
+
+`ic` is the management canister actor; `IC` is the module of request/response types.
 
 ### Fetch canister status
 ```motoko
-import {ic} "mo:ic";
+import { ic } "mo:ic";
 
 let canisterId = Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai");
-let canisterStatus = await ic.canister_status({canister_id = canisterId});
+let canisterStatus = await ic.canister_status({ canister_id = canisterId });
 
 Debug.print("status = " # debug_show canisterStatus.status);
 Debug.print("memory_size = " # debug_show canisterStatus.memory_size);
@@ -35,17 +33,25 @@ Debug.print("settings = " # debug_show canisterStatus.settings);
 ### Update canister settings
 Here we set the canister controllers to a single blackhole canister.
 ```motoko
-import {ic; CanisterSettings} "mo:ic";
+import { ic } "mo:ic";
+import IC "mo:ic/Types";
 
 let canisterId = Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai");
-let settings : CanisterSettings = {
-	freezing_threshold = null;
+let settings : IC.CanisterSettings = {
 	controllers = ?[Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai")];
-	memory_allocation = null;
 	compute_allocation = null;
+	memory_allocation = null;
+	freezing_threshold = null;
+	reserved_cycles_limit = null;
+	log_visibility = null;
+	snapshot_visibility = null;
+	wasm_memory_limit = null;
+	wasm_memory_threshold = null;
+	environment_variables = null;
 };
 await ic.update_settings({
 	canister_id = canisterId;
 	settings = settings;
+	sender_canister_version = null;
 });
 ```

@@ -1,8 +1,9 @@
-import Debug "mo:base/Debug";
-import Result "mo:base/Result";
+import Result "mo:core/Result";
+import Runtime "mo:core/Runtime";
 import Prim "mo:prim";
 
-import IC "lib";
+import { ic } "lib";
+import IC "Types";
 
 /// Provides wrapper functions for calls to the IC management canister that
 /// calculate cycles needed for the call and automatically add them to the call.
@@ -12,12 +13,12 @@ import IC "lib";
 module {
   /// Invokes the `create_canister` method of the IC management canister and automatically adds the necessary cycles to the call.
   public func createCanister(args : IC.CreateCanisterArgs) : async IC.CreateCanisterResult {
-    await (with cycles = Cost.createCanister()) IC.ic.create_canister(args);
+    await (with cycles = Cost.createCanister()) ic.create_canister(args);
   };
 
   /// Invokes the `http_request` method of the IC management canister and automatically adds the necessary cycles to the call.
   public func httpRequest(args : IC.HttpRequestArgs) : async IC.HttpRequestResult {
-    await (with cycles = Cost.httpRequest(args)) IC.ic.http_request(args);
+    await (with cycles = Cost.httpRequest(args)) ic.http_request(args);
   };
 
   /// Invokes the `sign_with_ecdsa` method of the IC management canister and automatically adds the necessary cycles to the call.
@@ -26,7 +27,7 @@ module {
   public func trySignWithEcdsa(args : IC.SignWithEcdsaArgs) : async Result<IC.SignWithEcdsaResult, SignError> {
     let { name; curve } = args.key_id;
     switch (Cost.signWithEcdsa(name, curve)) {
-      case (#ok(cycles)) #ok(await (with cycles) IC.ic.sign_with_ecdsa(args));
+      case (#ok(cycles)) #ok(await (with cycles) ic.sign_with_ecdsa(args));
       case (#err(error)) #err(error);
     };
   };
@@ -37,8 +38,8 @@ module {
   public func signWithEcdsa(args : IC.SignWithEcdsaArgs) : async IC.SignWithEcdsaResult {
     let { name; curve } = args.key_id;
     switch (Cost.signWithEcdsa(name, curve)) {
-      case (#ok(cycles)) await (with cycles) IC.ic.sign_with_ecdsa(args);
-      case (#err(error)) Debug.trap("Cannot determine cost of sign_with_ecdsa: " # debug_show (error));
+      case (#ok(cycles)) await (with cycles) ic.sign_with_ecdsa(args);
+      case (#err(error)) Runtime.trap("Cannot determine cost of sign_with_ecdsa: " # debug_show (error));
     };
   };
 
@@ -48,7 +49,7 @@ module {
   public func trySignWithSchnorr(args : IC.SignWithSchnorrArgs) : async Result<IC.SignWithSchnorrResult, SignError> {
     let { name; algorithm } = args.key_id;
     switch (Cost.signWithSchnorr(name, algorithm)) {
-      case (#ok(cycles)) #ok(await (with cycles) IC.ic.sign_with_schnorr(args));
+      case (#ok(cycles)) #ok(await (with cycles) ic.sign_with_schnorr(args));
       case (#err(error)) #err(error);
     };
   };
@@ -59,8 +60,8 @@ module {
   public func signWithSchnorr(args : IC.SignWithSchnorrArgs) : async IC.SignWithSchnorrResult {
     let { name; algorithm } = args.key_id;
     switch (Cost.signWithSchnorr(name, algorithm)) {
-      case (#ok(cycles)) await (with cycles) IC.ic.sign_with_schnorr(args);
-      case (#err(error)) Debug.trap("Cannot determine cost of sign_with_schnorr: " # debug_show (error));
+      case (#ok(cycles)) await (with cycles) ic.sign_with_schnorr(args);
+      case (#err(error)) Runtime.trap("Cannot determine cost of sign_with_schnorr: " # debug_show (error));
     };
   };
 
@@ -90,9 +91,9 @@ module {
       let (code, cyclesOrArbitrary) = Prim.costSignWithEcdsa(keyName, curveEncoding);
       switch (code) {
         case 0 #ok(cyclesOrArbitrary);
-        case 1 Debug.trap("Unreachable: Invalid ecdsa curve encoding.");
+        case 1 Runtime.trap("Unreachable: Invalid ecdsa curve encoding.");
         case 2 #err(#invalidKeyName);
-        case _ Debug.trap("Invalid error code returned from Prim.costSignWithEcdsa");
+        case _ Runtime.trap("Invalid error code returned from Prim.costSignWithEcdsa");
       };
     };
 
@@ -104,9 +105,9 @@ module {
       let (code, cyclesOrArbitrary) = Prim.costSignWithSchnorr(keyName, algorithmEncoding);
       switch (code) {
         case 0 #ok(cyclesOrArbitrary);
-        case 1 Debug.trap("Unreachable: Invalid schnorr algorithm encoding.");
+        case 1 Runtime.trap("Unreachable: Invalid schnorr algorithm encoding.");
         case 2 #err(#invalidKeyName);
-        case _ Debug.trap("Invalid error code returned from Prim.costSignWithSchnorr");
+        case _ Runtime.trap("Invalid error code returned from Prim.costSignWithSchnorr");
       };
     };
 

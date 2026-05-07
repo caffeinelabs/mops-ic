@@ -1,14 +1,15 @@
-import Blob "mo:base/Blob";
-import Principal "mo:base/Principal";
-import Result "mo:base/Result";
-import Debug "mo:base/Debug";
+import Blob "mo:core/Blob";
+import Principal "mo:core/Principal";
+import Result "mo:core/Result";
+import Runtime "mo:core/Runtime";
 import { suite; test; expect } "mo:test/async";
 import ExpectResult "mo:test/expect/expect-result";
 
-import IC "../src";
+import { ic } "../src";
+import IC "../src/Types";
 import Call "../src/Call";
 
-persistent actor {
+actor {
   public shared ({ caller }) func runTests() : async () {
     await test(
       "createCanister should succeed",
@@ -21,10 +22,10 @@ persistent actor {
       "create_canister cost should be exact",
       func() : async () {
         let cycles = Call.Cost.createCanister();
-        ignore await (with cycles) IC.ic.create_canister(createCanisterArgs);
+        ignore await (with cycles) ic.create_canister(createCanisterArgs);
         await expect.call(
           func() : async () {
-            ignore await (with cycles = cycles - 1) IC.ic.create_canister(createCanisterArgs);
+            ignore await (with cycles = cycles - 1) ic.create_canister(createCanisterArgs);
           }
         ).reject();
       },
@@ -73,11 +74,11 @@ persistent actor {
       "sign_with_ecdsa cost should be exact",
       func() : async () {
         let args = ecdsaArgs(caller, #secp256k1, "test_key_1");
-        let (#ok cycles) = Call.Cost.signWithEcdsa(args.key_id.name, args.key_id.curve) else Debug.trap("cost of sign_with_ecdsa should succeed");
-        ignore await (with cycles) IC.ic.sign_with_ecdsa(args);
+        let (#ok cycles) = Call.Cost.signWithEcdsa(args.key_id.name, args.key_id.curve) else Runtime.trap("cost of sign_with_ecdsa should succeed");
+        ignore await (with cycles) ic.sign_with_ecdsa(args);
         await expect.call(
           func() : async () {
-            ignore await (with cycles = cycles - 1) IC.ic.sign_with_ecdsa(args);
+            ignore await (with cycles = cycles - 1) ic.sign_with_ecdsa(args);
           }
         ).reject();
       },
@@ -98,11 +99,11 @@ persistent actor {
       "sign_with_schnorr cost should be exact",
       func() : async () {
         let args = schnorrArgs(caller, #ed25519, "test_key_1");
-        let (#ok cycles) = Call.Cost.signWithSchnorr(args.key_id.name, args.key_id.algorithm) else Debug.trap("cost of sign_with_schnorr should succeed");
-        ignore await (with cycles) IC.ic.sign_with_schnorr(args);
+        let (#ok cycles) = Call.Cost.signWithSchnorr(args.key_id.name, args.key_id.algorithm) else Runtime.trap("cost of sign_with_schnorr should succeed");
+        ignore await (with cycles) ic.sign_with_schnorr(args);
         await expect.call(
           func() : async () {
-            ignore await (with cycles = cycles - 1) IC.ic.sign_with_schnorr(args);
+            ignore await (with cycles = cycles - 1) ic.sign_with_schnorr(args);
           }
         ).reject();
       },
@@ -111,10 +112,10 @@ persistent actor {
 
   func httpRequestExactCost(request : IC.HttpRequestArgs) : () -> async () = func() : async () {
     let cycles = Call.Cost.httpRequest(request);
-    ignore await (with cycles) IC.ic.http_request(request);
+    ignore await (with cycles) ic.http_request(request);
     await expect.call(
       func() : async () {
-        ignore await (with cycles = cycles - 1) IC.ic.http_request(request);
+        ignore await (with cycles = cycles - 1) ic.http_request(request);
       }
     ).reject();
   };
@@ -164,13 +165,13 @@ persistent actor {
   let fakeMessageHash = Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
   func ecdsaArgs(caller : Principal, curve : IC.EcdsaCurve, keyName : Text) : IC.SignWithEcdsaArgs = {
-    derivation_path = [Principal.toBlob(caller)];
+    derivation_path = [caller.toBlob()];
     key_id = { curve; name = keyName };
     message_hash = fakeMessageHash;
   };
 
   func schnorrArgs(caller : Principal, algorithm : IC.SchnorrAlgorithm, keyName : Text) : IC.SignWithSchnorrArgs = {
-    derivation_path = [Principal.toBlob(caller)];
+    derivation_path = [caller.toBlob()];
     key_id = { algorithm; name = keyName };
     message = fakeMessageHash;
     aux = null;
