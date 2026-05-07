@@ -26,4 +26,4 @@ jobs:
         run: mops install
 
       - name: run tests
-        run: mops test
+        run: mops test --replica pocket-ic
