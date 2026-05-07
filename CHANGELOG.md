@@ -1,3 +1,46 @@
+## 4.0.0
+
+Types are now generated from the upstream Candid spec ([`did/ic.did`](./did/ic.did), mirrored from [`dfinity/portal`](https://github.com/dfinity/portal/blob/master/docs/references/_attachments/ic.did)) via `didc bind --target mo`. The generated module lives at `mo:ic/Types`; `mo:ic` itself stays a thin actor wrapper.
+
+### Migration
+
+Imports change:
+
+```motoko
+// before
+import IC "mo:ic";
+let args : IC.CreateCanisterArgs = ...;
+await IC.ic.create_canister(args);
+
+// after
+import { ic } "mo:ic";
+import IC "mo:ic/Types";
+let args : IC.CreateCanisterArgs = ...;
+await ic.create_canister(args);
+```
+
+### Toolchain
+
+- `[requirements] moc` raised to `1.4.0` for `Float32` (used by `read_/upload_canister_snapshot_metadata` `globals` variants).
+
+### Breaking type changes (aligned to upstream `.did`)
+
+- `BitcoinNetwork`: removed `#regtest` (spec only has `#mainnet`/`#testnet`).
+- `CanisterSettings` / `DefiniteCanisterSettings`: added `environment_variables`, `snapshot_visibility`. Record literals must include them (use `null` for `?` fields).
+- `TakeCanisterSnapshotArgs`: added `uninstall_code : ?Bool`, `sender_canister_version : ?Nat64`.
+- `ChangeDetails`:
+  - new variant case `#rename_canister` — exhaustive `switch` patterns must handle it.
+  - `#creation` extended with `environment_variables_hash : ?Blob`.
+  - `#load_snapshot` extended with `from_canister_id : ?Principal` and `source` variant.
+
+### Additive changes
+
+- New methods: `canister_metadata`, `list_canisters`, `read_canister_snapshot_data`, `read_canister_snapshot_metadata`, `upload_canister_snapshot_data`, `upload_canister_snapshot_metadata`.
+- New types: `EnvironmentVariable`, `SnapshotVisibility`, `CanisterMetadataArgs`/`Result`, `CanisterIdRange`, `ListCanistersResult`, `ReadCanisterSnapshotData{Args,Response}`, `ReadCanisterSnapshotMetadata{Args,Response}`, `UploadCanisterSnapshotData{Args}`, `UploadCanisterSnapshotMetadata{Args,Response}`.
+- `HttpRequestArgs.method`: added `#put`, `#delete` (additive on input variants).
+- `CanisterStatusResult`: added `ready_for_migration : Bool`, `version : Nat64`.
+- `SubnetInfoResult`: added `registry_version : Nat64`.
+
 ## 3.2.0
 - Decoupled `TransformFunction` from `Transform` type
 

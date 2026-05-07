@@ -18,7 +18,12 @@ jobs:
       - uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
 
       - name: Install dfx
+        # Pinned to last dfx that auto-configures tECDSA / tSchnorr keys on the
+        # local replica; later versions switched the default backend to
+        # pocket-ic, which omits chain-key keys without explicit subnet config.
         uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+        with:
+          dfx-version: 0.30.1
       - name: Confirm successful installation
         run: dfx --version
 

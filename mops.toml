@@ -1,19 +1,22 @@
 [package]
 name = "ic"
-version = "3.2.0"
+version = "4.0.0-alpha.1"
 description = "IC management canister interface (aaaaa-aa)"
-repository = "https://github.com/dfinity/motoko-mgmt-canister"
-keywords = [ "ic", "types", "interface", "http" ]
+repository = "https://github.com/caffeinelabs/mops-ic"
+keywords = ["ic", "types", "interface", "http"]
 license = "MIT"
 
 [dependencies]
-base = "0.15.1"
+core = "2.5.0"
 
 [requirements]
-moc = "0.14.10"
+moc = "1.4.0"
 
 [toolchain]
-moc = "0.14.14"
+moc = "1.7.0"
 
 [dev-dependencies]
-test = "2.1.1"
+test = "2.1.2"
+
+[moc]
+args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
