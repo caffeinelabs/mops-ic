@@ -2,7 +2,7 @@ import Blob "mo:core/Blob";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Runtime "mo:core/Runtime";
-import { suite; test; expect } "mo:test/async";
+import { suite; test; skip; expect } "mo:test/async";
 import ExpectResult "mo:test/expect/expect-result";
 
 import { ic } "../src";
@@ -61,7 +61,12 @@ actor {
       },
     );
 
-    await test(
+    // tECDSA / tSchnorr cost lookup requires the replica to host the key on
+    // an II / fiduciary subnet; mops' default pocket-ic topology has only an
+    // application subnet, so `Prim.costSignWith{Ecdsa,Schnorr}` returns
+    // `#invalidKeyName` for every key. Re-enable when mops exposes subnet
+    // config or we run a custom pocket-ic harness.
+    await skip(
       "trySignWithEcdsa should succeed",
       func() : async () {
         ignore await Call.signWithEcdsa(ecdsaArgs(caller, #secp256k1, "dfx_test_key"));
@@ -70,7 +75,7 @@ actor {
       },
     );
 
-    await test(
+    await skip(
       "sign_with_ecdsa cost should be exact",
       func() : async () {
         let args = ecdsaArgs(caller, #secp256k1, "dfx_test_key");
@@ -84,7 +89,7 @@ actor {
       },
     );
 
-    await test(
+    await skip(
       "trySignWithSchnorr should succeed",
       func() : async () {
         ignore await Call.signWithSchnorr(schnorrArgs(caller, #bip340secp256k1, "dfx_test_key"));
@@ -95,7 +100,7 @@ actor {
       },
     );
 
-    await test(
+    await skip(
       "sign_with_schnorr cost should be exact",
       func() : async () {
         let args = schnorrArgs(caller, #ed25519, "dfx_test_key");
