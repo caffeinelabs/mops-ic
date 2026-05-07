@@ -64,8 +64,8 @@ actor {
     await test(
       "trySignWithEcdsa should succeed",
       func() : async () {
-        ignore await Call.signWithEcdsa(ecdsaArgs(caller, #secp256k1, "test_key_1"));
-        expectResult(await Call.trySignWithEcdsa(ecdsaArgs(caller, #secp256k1, "test_key_1"))).isOk();
+        ignore await Call.signWithEcdsa(ecdsaArgs(caller, #secp256k1, "dfx_test_key"));
+        expectResult(await Call.trySignWithEcdsa(ecdsaArgs(caller, #secp256k1, "dfx_test_key"))).isOk();
         expectResult(await Call.trySignWithEcdsa(ecdsaArgs(caller, #secp256k1, "wrong key"))).equal(#err(#invalidKeyName));
       },
     );
@@ -73,7 +73,7 @@ actor {
     await test(
       "sign_with_ecdsa cost should be exact",
       func() : async () {
-        let args = ecdsaArgs(caller, #secp256k1, "test_key_1");
+        let args = ecdsaArgs(caller, #secp256k1, "dfx_test_key");
         let (#ok cycles) = Call.Cost.signWithEcdsa(args.key_id.name, args.key_id.curve) else Runtime.trap("cost of sign_with_ecdsa should succeed");
         ignore await (with cycles) ic.sign_with_ecdsa(args);
         await expect.call(
@@ -87,10 +87,10 @@ actor {
     await test(
       "trySignWithSchnorr should succeed",
       func() : async () {
-        ignore await Call.signWithSchnorr(schnorrArgs(caller, #bip340secp256k1, "test_key_1"));
-        ignore await Call.signWithSchnorr(schnorrArgs(caller, #ed25519, "test_key_1"));
-        expectResult(await Call.trySignWithSchnorr(schnorrArgs(caller, #bip340secp256k1, "test_key_1"))).isOk();
-        expectResult(await Call.trySignWithSchnorr(schnorrArgs(caller, #ed25519, "test_key_1"))).isOk();
+        ignore await Call.signWithSchnorr(schnorrArgs(caller, #bip340secp256k1, "dfx_test_key"));
+        ignore await Call.signWithSchnorr(schnorrArgs(caller, #ed25519, "dfx_test_key"));
+        expectResult(await Call.trySignWithSchnorr(schnorrArgs(caller, #bip340secp256k1, "dfx_test_key"))).isOk();
+        expectResult(await Call.trySignWithSchnorr(schnorrArgs(caller, #ed25519, "dfx_test_key"))).isOk();
         expectResult(await Call.trySignWithSchnorr(schnorrArgs(caller, #ed25519, "wrong key"))).equal(#err(#invalidKeyName));
       },
     );
@@ -98,7 +98,7 @@ actor {
     await test(
       "sign_with_schnorr cost should be exact",
       func() : async () {
-        let args = schnorrArgs(caller, #ed25519, "test_key_1");
+        let args = schnorrArgs(caller, #ed25519, "dfx_test_key");
         let (#ok cycles) = Call.Cost.signWithSchnorr(args.key_id.name, args.key_id.algorithm) else Runtime.trap("cost of sign_with_schnorr should succeed");
         ignore await (with cycles) ic.sign_with_schnorr(args);
         await expect.call(
