@@ -1,6 +1,18 @@
+## 4.1.0
+
+### Additive changes
+
+- New types: `CyclesConsumed`, `CanisterMetricsArgs`, `CanisterMetricsResult`.
+- New method: `canister_metrics` (query) — returns per-category cycles consumed by a canister.
+
+### Housekeeping
+
+- Updated upstream `did/ic.did` source from `dfinity/portal` → `dfinity/developer-docs` (new authoritative location).
+- `REGENERATING.md`: documented `didc` ≥ 0.6.x build-from-source requirement and the `PascalCase` type-name conversion step.
+
 ## 4.0.0
 
-Types are now generated from the upstream Candid spec ([`did/ic.did`](./did/ic.did), mirrored from [`dfinity/portal`](https://github.com/dfinity/portal/blob/master/docs/references/_attachments/ic.did)) via `didc bind --target mo`. The generated module lives at `mo:ic/Types`; `mo:ic` itself stays a thin actor wrapper.
+Types are now generated from the upstream Candid spec ([`did/ic.did`](./did/ic.did), mirrored from [`dfinity/developer-docs`](https://github.com/dfinity/developer-docs/blob/main/public/references/ic.did)) via `didc bind --target mo`. The generated module lives at `mo:ic/Types`; `mo:ic` itself stays a thin actor wrapper.
 
 ### Migration
 
