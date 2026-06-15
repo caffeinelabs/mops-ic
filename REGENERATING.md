@@ -2,14 +2,22 @@
 
 How to update `src/Types.mo` when `did/ic.did` changes upstream.
 
-Assumes `didc` supports `--target mo` with `Float32` (≥ 0.6.x).
+Requires `didc` ≥ 0.6.x for `Float32` support. As of 2026-06-11 the released binary is 0.5.4 (lacks `Float32`); build from source:
+
+```bash
+git clone --depth 1 https://github.com/dfinity/candid.git /tmp/candid-src
+cargo build --release --manifest-path /tmp/candid-src/Cargo.toml -p didc
+# binary at /tmp/candid-src/target/release/didc
+```
+
+**Note on naming:** `didc bind --target mo` outputs `snake_case` type names. The canonical `src/Types.mo` uses `PascalCase` for type names (field names and method names stay `snake_case`). The TL;DR and steps below include the conversion.
 
 ## TL;DR
 
 ```bash
 curl -fsSL -o did/ic.did \
-  https://raw.githubusercontent.com/dfinity/portal/master/docs/references/_attachments/ic.did
-didc bind --target mo did/ic.did > src/Types.mo
+  https://raw.githubusercontent.com/dfinity/developer-docs/refs/heads/main/public/references/ic.did
+didc bind --target mo did/ic.did | python3 scripts/pascal_types.py > src/Types.mo
 mops test                                    # builds + runs tests
 git diff src/Types.mo                        # classify the change (see step 4)
 ```
@@ -22,7 +30,7 @@ Then decide the semver bump (below), update `mops.toml` + `CHANGELOG.md`, commit
 
 ```bash
 curl -fsSL -o did/ic.did \
-  https://raw.githubusercontent.com/dfinity/portal/master/docs/references/_attachments/ic.did
+  https://raw.githubusercontent.com/dfinity/developer-docs/refs/heads/main/public/references/ic.did
 git diff did/ic.did
 ```
 
@@ -31,8 +39,10 @@ If the diff is empty, you're done.
 ### 2. Regenerate `src/Types.mo`
 
 ```bash
-didc bind --target mo did/ic.did > src/Types.mo
+didc bind --target mo did/ic.did | python3 scripts/pascal_types.py > src/Types.mo
 ```
+
+`scripts/pascal_types.py` converts `snake_case` type names to `PascalCase` (field names and method names are left as-is). See the script for details.
 
 ### 3. Type-check + tests
 

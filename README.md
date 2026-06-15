@@ -3,7 +3,7 @@
 [![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/ic)](https://mops.one/ic)
 [![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/ic)](https://mops.one/ic/docs)
 
-Motoko interface for the IC management canister (`aaaaa-aa`). The Motoko types are generated from the upstream Candid spec mirrored at [`did/ic.did`](./did/ic.did) (from [`dfinity/portal`](https://github.com/dfinity/portal/blob/master/docs/references/_attachments/ic.did)).
+Motoko interface for the IC management canister (`aaaaa-aa`). The Motoko types are generated from the upstream Candid spec mirrored at [`did/ic.did`](./did/ic.did) (from [`dfinity/developer-docs`](https://github.com/dfinity/developer-docs/blob/main/public/references/ic.did)).
 
 See [Call](https://mops.one/ic/docs/Call) module documentation for automatic calculation of the minimum amount of cycles and attaching them to the call.
 

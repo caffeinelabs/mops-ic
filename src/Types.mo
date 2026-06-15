@@ -68,6 +68,8 @@ module {
   };
   public type CanisterMetadataArgs = { name : Text; canister_id : CanisterId };
   public type CanisterMetadataResult = { value : Blob };
+  public type CanisterMetricsArgs = { canister_id : CanisterId };
+  public type CanisterMetricsResult = { cycles_consumed : CyclesConsumed };
   public type CanisterSettings = {
     freezing_threshold : ?Nat;
     wasm_memory_threshold : ?Nat;
@@ -154,6 +156,21 @@ module {
     sender_canister_version : ?Nat64;
   };
   public type CreateCanisterResult = { canister_id : CanisterId };
+  public type CyclesConsumed = {
+    memory : Nat;
+    canister_creation : Nat;
+    burned_cycles : Nat;
+    http_outcalls : Nat;
+    instructions : Nat;
+    /// This metric applies to canisters that ran out of cycles. In particular,
+    /// uninstalling code explicitly would not result in this metric being updated.
+    /// In fact, others might be updated in that case, e.g. cycles for ingress induction
+    /// if the uninstallation of the canister was requested via an ingress message.
+    uninstall : Nat;
+    ingress_induction : Nat;
+    request_and_response_transmission : Nat;
+    compute_allocation : Nat;
+  };
   public type DefiniteCanisterSettings = {
     freezing_threshold : Nat;
     wasm_memory_threshold : Nat;
@@ -413,6 +430,8 @@ module {
     /// Public canister data
     canister_info : shared CanisterInfoArgs -> async CanisterInfoResult;
     canister_metadata : shared CanisterMetadataArgs -> async CanisterMetadataResult;
+    /// Returns canister related metrics
+    canister_metrics : shared query CanisterMetricsArgs -> async CanisterMetricsResult;
     canister_status : shared query CanisterStatusArgs -> async CanisterStatusResult;
     clear_chunk_store : shared ClearChunkStoreArgs -> async ();
     create_canister : shared CreateCanisterArgs -> async CreateCanisterResult;

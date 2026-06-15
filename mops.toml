@@ -1,6 +1,6 @@
 [package]
 name = "ic"
-version = "4.0.0"
+version = "4.1.0"
 description = "IC management canister interface (aaaaa-aa)"
 repository = "https://github.com/caffeinelabs/mops-ic"
 keywords = ["ic", "types", "interface", "http"]
