@@ -79,11 +79,10 @@ Standard flow. CI runs `mops test`.
 
 ### 7. Publish
 
-After merge:
-
-```bash
-mops publish
-```
+Publishing is automatic: merging the version bump to `master` triggers the
+`mops publish` workflow, which publishes to the registry and tags the release.
+Don't run `mops publish` by hand. To retry after a transient failure, re-run the
+workflow via `workflow_dispatch`.
 
 ## Notes
 
