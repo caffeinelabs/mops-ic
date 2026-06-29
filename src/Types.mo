@@ -204,7 +204,7 @@ module {
   public type HttpHeader = { value : Text; name : Text };
   public type HttpRequestArgs = {
     url : Text;
-    method : { #get; #put; #head; #post; #delete };
+    method : { #get; #put; #head; #post; #delete; #patch };
     max_response_bytes : ?Nat64;
     body : ?Blob;
     transform : ?{

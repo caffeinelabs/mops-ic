@@ -1,3 +1,13 @@
+## 4.2.0
+
+### Additive changes
+
+- `HttpRequestArgs.method` gains the `#patch` case. The IC interface spec added `patch` to `http_request` (dfinity/developer-docs#289, merged 2026-06-29); `PATCH` HTTPS outcalls are rolled out across all subnets. Additive variant-case change — existing `#get`/`#head`/`#post`/`#put`/`#delete` callers are unaffected.
+
+### Housekeeping
+
+- Refreshed `did/ic.did` from `dfinity/developer-docs` main (only the `http_request_args.method` variant changed).
+
 ## 4.1.0
 
 ### Additive changes
