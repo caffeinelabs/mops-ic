@@ -1,4 +1,5 @@
 import Blob "mo:core/Blob";
+import Nat32 "mo:core/Nat32";
 import Principal "mo:core/Principal";
 import Result "mo:core/Result";
 import Runtime "mo:core/Runtime";
@@ -34,30 +35,31 @@ actor {
     await test(
       "httpRequest should succeed",
       func() : async () {
-        ignore await Call.httpRequest(request);
-        ignore await Call.httpRequest({ request with headers });
-        ignore await Call.httpRequest({ request with body });
-        ignore await Call.httpRequest({ request with max_response_bytes });
-        ignore await Call.httpRequest({
-          request with headers;
-          body;
-          max_response_bytes;
-        });
-        ignore await Call.httpRequest({ request with transform });
+        ignore await Call.httpRequestFromArgs(request).send();
+        ignore await Call.httpRequestFromArgs({ request with headers }).send();
+        ignore await Call.httpRequestFromArgs({ request with body }).send();
+        ignore await Call.httpRequestFromArgs({ request with max_response_bytes }).send();
+        ignore await Call.httpRequest("https://ic0.app")
+          .withHeader("x-test", "test")
+          .withMaxResponseBytes(1_000)
+          .withExpectedRoundtripTimeMs(300)
+          .send();
+        // A transform is set through the builder too; it raises the reservation, because a
+        // request with no transform reserves nothing for one.
+        let withoutTransform = Call.httpRequestFromArgs(request).getCost();
+        let withTransform = Call.httpRequestFromArgs({ request with transform }).getCost();
+        expect.bool(withTransform > withoutTransform).isTrue();
       },
     );
 
     await suite(
-      "http_request cost should be exact",
+      "http_request version 2 quote is sufficient",
       func() : async () {
-        await test("default", httpRequestExactCost(request));
-        await test("with headers", httpRequestExactCost({ request with headers }));
-        await test("with body", httpRequestExactCost({ request with body }));
-        await test("with max_response_bytes", httpRequestExactCost({ request with max_response_bytes }));
-        await test("with all above", httpRequestExactCost({ request with headers; body; max_response_bytes }));
-
-        // Future work: transform can't be exact yet
-        // await test("with transform", httpRequestExactCost({ request with transform }));
+        await test("default", httpRequestQuoteSuffices(request));
+        await test("with headers", httpRequestQuoteSuffices({ request with headers }));
+        await test("with body", httpRequestQuoteSuffices({ request with body }));
+        await test("with max_response_bytes", httpRequestQuoteSuffices({ request with max_response_bytes }));
+        await test("with all above", httpRequestQuoteSuffices({ request with headers; body; max_response_bytes }));
       },
     );
 
@@ -108,19 +110,51 @@ actor {
         ).reject();
       },
     );
-  };
-
-  func httpRequestExactCost(request : IC.HttpRequestArgs) : () -> async () = func() : async () {
-    let cycles = Call.Cost.httpRequest(request);
-    ignore await (with cycles) ic.http_request(request);
-    await expect.call(
+    await suite(
+      "pay-as-you-go pricing",
       func() : async () {
-        ignore await (with cycles = cycles - 1) ic.http_request(request);
-      }
-    ).reject();
+        await test(
+          "httpRequestV2 quotes a positive amount",
+          func() : async () {
+            let v2 = { request with pricing_version = ?(2 : Nat32) };
+            expect.nat(Call.Cost.httpRequestV2(v2, Call.Cost.worstCase)).greater(0);
+          },
+        );
+        await test(
+          "narrowing the expectation lowers the quote",
+          func() : async () {
+            let v2 = { request with pricing_version = ?(2 : Nat32); max_response_bytes = ?(4_000 : Nat64) };
+            let worst = Call.Cost.httpRequestV2(v2, Call.Cost.worstCase);
+            let narrowed = Call.Cost.httpRequestV2(
+              v2,
+              { Call.Cost.worstCase with roundtripTimeMs = ?(300 : Nat64); transformInstructions = ?(1_000_000 : Nat64) },
+            );
+            expect.bool(narrowed < worst).isTrue();
+          },
+        );
+        await test(
+          "flexibleHttpRequest quotes a positive amount",
+          func() : async () {
+            expect.nat(Call.Cost.flexibleHttpRequest(flexibleRequest, Call.Cost.worstCase)).greater(0);
+          },
+        );
+      },
+    );
   };
 
-  func expectResult<Ok, Err>(result : Result.Result<Ok, Err>) : ExpectResult.ExpectResult<Ok, Err> = expect.result<Ok, Err>(
+  /// Version `2` quotes a reservation, not an exact charge: it covers the most expensive result
+  /// the call could still produce, and the unspent remainder is refunded. So the quote must be
+  /// enough to make the call, and the builder must attach it.
+  func httpRequestQuoteSuffices(request : IC.HttpRequestArgs) : () -> async () = func() : async () {
+    let builder = Call.httpRequestFromArgs(request);
+    let cycles = builder.getCost();
+    expect.nat(cycles).greater(0);
+    // The builder always selects version 2, whatever the caller passed.
+    expect.option(builder.args().pricing_version, Nat32.toText, Nat32.equal).equal(?2);
+    ignore await (with cycles) ic.http_request(builder.args());
+  };
+
+  func expectResult<Ok, Err>(result : Result.Result<Ok, Err>) : ExpectResult.ExpectResult<Ok, Err> = expect.result(
     result,
     func r = switch r {
       case (#ok _) "ok";
@@ -154,7 +188,18 @@ actor {
     max_response_bytes = null;
     transform = null;
     is_replicated = null;
+    pricing_version = null;
   };
+  let flexibleRequest : IC.FlexibleHttpRequestArgs = {
+    url = "https://ic0.app";
+    method = #get;
+    headers = [];
+    body = null;
+    max_response_bytes = null;
+    transform = null;
+    replication = ?{ min_responses = 2; max_responses = 3; total_requests = 3 };
+  };
+
   let headers = [{ name = "x-test"; value = "test" }];
   let body = ?to_candid ([1, 2, 3]);
   let max_response_bytes : ?Nat64 = ?1_000;
@@ -176,4 +221,4 @@ actor {
     message = fakeMessageHash;
     aux = null;
   };
-};
+}

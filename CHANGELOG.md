@@ -1,3 +1,70 @@
+## 5.0.0
+
+Adds the pay-as-you-go pricing field and the flexible HTTPS outcall interface, and picks up
+`status_visibility`, which had not been regenerated since it landed upstream.
+
+### Breaking type changes (aligned to upstream `.did`)
+
+- `HttpRequestArgs` gains `pricing_version : ?Nat32`, selecting the pricing mechanism for an
+  outcall: `1` (legacy, the default, deprecated) or `2` (pay-as-you-go). Motoko requires every
+  field in a record literal, so existing callers that construct `HttpRequestArgs` by hand must
+  add `pricing_version = null` to construct one. Callers using the `Call` builders do not need to:
+  the builders set it themselves.
+
+### Additive changes
+
+- New method: `flexible_http_request` — a variant of `http_request` in which a committee of nodes
+  return their individual HTTP responses instead of the subnet reaching consensus on one.
+- New types: `FlexibleHttpRequestArgs`, `FlexibleHttpRequestResult`, `FlexibleHttpRequestErr`,
+  `HttpRequestResourceReport`.
+- New type: `StatusVisibility`, and `status_visibility` on `CanisterSettings` and
+  `DefiniteCanisterSettings`.
+
+### Builders, replacing the record wrappers
+
+`Call.httpRequest` is now a builder that always selects pricing version `2`, and
+`Call.flexibleHttpRequest` is its counterpart for the new endpoint.
+
+```motoko
+let response = await Call.httpRequest("https://example.com/api")
+  .withMethod(#post)
+  .withMaxResponseBytes(4_000)
+  .withExpectedRoundtripTimeMs(300)
+  .send();
+```
+
+- `Call.httpRequest` changes from `(IC.HttpRequestArgs) -> async IC.HttpRequestResult` to
+  `(Text) -> HttpRequest`, so every call site fails to compile until it is migrated. Switching the
+  pricing version underneath an unchanged call would have been silent; this is deliberate.
+- `Call.httpRequestFromArgs(args)` and `Call.flexibleHttpRequestFromArgs(args)` take existing
+  arguments, so a call site can migrate without rewriting how it builds them. Both overwrite
+  `pricing_version` with `2`.
+- `withExpected*` on both builders narrows the reservation. Under version `2` the attached cycles
+  are also the budget each node may spend, so anything left unset falls back to the most that
+  parameter could reach. Two defaults are worth knowing: a request with no `transform` reserves
+  nothing for one, and a flexible outcall's expected transformed size is capped at the block
+  budget divided by `min_responses`, since responses larger than that average cannot be delivered
+  together.
+- `getCost()` returns what `send()` will attach; `args()` returns the arguments as they stand.
+- `Call.Cost.httpRequestV2` and `Call.Cost.flexibleHttpRequest` price an outcall directly, via the
+  new `ic0.cost_http_request_v2` system API.
+
+### Removed
+
+- `Call.Cost.httpRequest`, which priced version `1`. Version `2` is the only pricing the package
+  wraps. `Prim.costHttpRequest` still exposes version `1` for callers that need it.
+
+### Toolchain
+
+These wrappers require a `moc` that surfaces `ic0.cost_http_request_v2` and
+`ic0.subnet_self_node_count` as the `costHttpRequestV2` and `subnetSelfNodeCount` primitives.
+`[requirements] moc` must be raised to that release before publishing; the pinned `1.7.0` does not
+have them.
+
+### Housekeeping
+
+- Refreshed `did/ic.did` from `dfinity/developer-docs`.
+
 ## 4.2.0
 
 ### Additive changes
