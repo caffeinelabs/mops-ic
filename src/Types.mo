@@ -24,7 +24,9 @@ module {
   public type BitcoinGetCurrentFeePercentilesArgs = {
     network : BitcoinNetwork;
   };
-  public type BitcoinGetCurrentFeePercentilesResult = [MillisatoshiPerByte];
+  public type BitcoinGetCurrentFeePercentilesResult = [
+    MillisatoshiPerByte
+  ];
   public type BitcoinGetUtxosArgs = {
     network : BitcoinNetwork;
     filter : ?{ #page : Blob; #min_confirmations : Nat32 };
@@ -66,7 +68,10 @@ module {
     timestamp_nanos : Nat64;
     content : Blob;
   };
-  public type CanisterMetadataArgs = { name : Text; canister_id : CanisterId };
+  public type CanisterMetadataArgs = {
+    name : Text;
+    canister_id : CanisterId;
+  };
   public type CanisterMetadataResult = { value : Blob };
   public type CanisterMetricsArgs = { canister_id : CanisterId };
   public type CanisterMetricsResult = { cycles_consumed : CyclesConsumed };
@@ -75,10 +80,13 @@ module {
     wasm_memory_threshold : ?Nat;
     environment_variables : ?[EnvironmentVariable];
     controllers : ?[Principal];
+    minimum_incoming_canister_call_cycles : ?Nat;
     reserved_cycles_limit : ?Nat;
     log_visibility : ?LogVisibility;
+    log_memory_limit : ?Nat;
     snapshot_visibility : ?SnapshotVisibility;
     wasm_memory_limit : ?Nat;
+    status_visibility : ?StatusVisibility;
     memory_allocation : ?Nat;
     compute_allocation : ?Nat;
   };
@@ -86,6 +94,7 @@ module {
   public type CanisterStatusResult = {
     memory_metrics : {
       wasm_binary_size : Nat;
+      log_memory_store_size : Nat;
       wasm_chunk_store_size : Nat;
       canister_history_size : Nat;
       stable_memory_size : Nat;
@@ -176,10 +185,13 @@ module {
     wasm_memory_threshold : Nat;
     environment_variables : [EnvironmentVariable];
     controllers : [Principal];
+    minimum_incoming_canister_call_cycles : Nat;
     reserved_cycles_limit : Nat;
     log_visibility : LogVisibility;
+    log_memory_limit : Nat;
     snapshot_visibility : SnapshotVisibility;
     wasm_memory_limit : Nat;
+    status_visibility : StatusVisibility;
     memory_allocation : Nat;
     compute_allocation : Nat;
   };
@@ -195,11 +207,59 @@ module {
     canister_id : ?CanisterId;
     derivation_path : [Blob];
   };
-  public type EcdsaPublicKeyResult = { public_key : Blob; chain_code : Blob };
+  public type EcdsaPublicKeyResult = {
+    public_key : Blob;
+    chain_code : Blob;
+  };
   public type EnvironmentVariable = { value : Text; name : Text };
-  public type FetchCanisterLogsArgs = { canister_id : CanisterId };
+  public type FetchCanisterLogsArgs = {
+    canister_id : CanisterId;
+    filter : ?{
+      #by_idx : { end : Nat64; start : Nat64 };
+      #by_timestamp_nanos : { end : Nat64; start : Nat64 };
+    };
+  };
   public type FetchCanisterLogsResult = {
     canister_log_records : [CanisterLogRecord];
+  };
+  public type FlexibleHttpRequestArgs = {
+    url : Text;
+    method : { #get; #put; #head; #post; #delete; #patch };
+    max_response_bytes : ?Nat64;
+    body : ?Blob;
+    transform : ?{
+      function : shared query {
+          context : Blob;
+          response : HttpRequestResult;
+        } -> async HttpRequestResult;
+      context : Blob;
+    };
+    headers : [HttpHeader];
+    replication : ?{
+      total_requests : Nat32;
+      max_responses : Nat32;
+      min_responses : Nat32;
+    };
+  };
+  public type FlexibleHttpRequestErr = {
+    node_details : [
+      {
+        report : HttpRequestResourceReport;
+        node_id : Principal;
+        error : ?{ code : Text; message : Text };
+      }
+    ];
+    global_error : ?{
+      #responses_too_large : Any;
+      #out_of_cycles : Any;
+      #too_many_rejects : Any;
+      #timeout : Any;
+    };
+    message : Text;
+  };
+  public type FlexibleHttpRequestResult = {
+    #ok : [HttpRequestResult];
+    #err : FlexibleHttpRequestErr;
   };
   public type HttpHeader = { value : Text; name : Text };
   public type HttpRequestArgs = {
@@ -216,6 +276,14 @@ module {
     };
     headers : [HttpHeader];
     is_replicated : ?Bool;
+    pricing_version : ?Nat32;
+  };
+  public type HttpRequestResourceReport = {
+    transformed_response_bytes : ?{ #exceeded : Any; #used : Nat64 };
+    transform_instructions : ?{ #exceeded : Any; #used : Nat64 };
+    cycles : ?{ #exceeded : Any; #used : Nat };
+    raw_response_bytes : ?{ #exceeded : Any; #used : Nat64 };
+    http_roundtrip_time_ms : ?{ #exceeded : Any; #used : Nat64 };
   };
   public type HttpRequestResult = {
     status : Nat;
@@ -321,7 +389,10 @@ module {
     canister_id : ?CanisterId;
     derivation_path : [Blob];
   };
-  public type SchnorrPublicKeyResult = { public_key : Blob; chain_code : Blob };
+  public type SchnorrPublicKeyResult = {
+    public_key : Blob;
+    chain_code : Blob;
+  };
   public type SignWithEcdsaArgs = {
     key_id : { name : Text; curve : EcdsaCurve };
     derivation_path : [Blob];
@@ -347,6 +418,11 @@ module {
     #allowed_viewers : [Principal];
   };
   public type StartCanisterArgs = { canister_id : CanisterId };
+  public type StatusVisibility = {
+    #controllers;
+    #public_;
+    #allowed_viewers : [Principal];
+  };
   public type StopCanisterArgs = { canister_id : CanisterId };
   public type StoredChunksArgs = { canister_id : CanisterId };
   public type StoredChunksResult = [ChunkHash];
@@ -428,7 +504,7 @@ module {
     bitcoin_get_utxos : shared BitcoinGetUtxosArgs -> async BitcoinGetUtxosResult;
     bitcoin_send_transaction : shared BitcoinSendTransactionArgs -> async ();
     /// Public canister data
-    canister_info : shared CanisterInfoArgs -> async CanisterInfoResult;
+    canister_info : shared query CanisterInfoArgs -> async CanisterInfoResult;
     canister_metadata : shared CanisterMetadataArgs -> async CanisterMetadataResult;
     /// Returns canister related metrics
     canister_metrics : shared query CanisterMetricsArgs -> async CanisterMetricsResult;
@@ -442,6 +518,7 @@ module {
     ecdsa_public_key : shared EcdsaPublicKeyArgs -> async EcdsaPublicKeyResult;
     /// canister logging
     fetch_canister_logs : shared query FetchCanisterLogsArgs -> async FetchCanisterLogsResult;
+    flexible_http_request : shared FlexibleHttpRequestArgs -> async FlexibleHttpRequestResult;
     http_request : shared HttpRequestArgs -> async HttpRequestResult;
     install_chunked_code : shared InstallChunkedCodeArgs -> async ();
     install_code : shared InstallCodeArgs -> async ();
