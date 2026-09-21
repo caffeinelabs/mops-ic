@@ -2,12 +2,17 @@
 
 How to update `src/Types.mo` when `did/ic.did` changes upstream.
 
-Requires `didc` ≥ 0.6.x for `Float32` support. As of 2026-06-11 the released binary is 0.5.4 (lacks `Float32`); build from source:
+Requires `didc` ≥ 0.6.x for `Float32` support. The current release is [didc 0.6.2](https://github.com/dfinity/candid/releases/tag/didc-v0.6.2) (2026-06-25); install a GitHub-release binary rather than building from source:
 
 ```bash
-git clone --depth 1 https://github.com/dfinity/candid.git /tmp/candid-src
-cargo build --release --manifest-path /tmp/candid-src/Cargo.toml -p didc
-# binary at /tmp/candid-src/target/release/didc
+# Linux x86_64
+curl -fsSL -o /tmp/didc.tar.xz \
+  https://github.com/dfinity/candid/releases/download/didc-v0.6.2/didc-x86_64-unknown-linux-gnu.tar.xz
+tar -xJf /tmp/didc.tar.xz -C /tmp
+# binary at /tmp/didc-x86_64-unknown-linux-gnu/didc
+
+# macOS Apple Silicon
+# https://github.com/dfinity/candid/releases/download/didc-v0.6.2/didc-aarch64-apple-darwin.tar.xz
 ```
 
 **Note on naming:** `didc bind --target mo` outputs `snake_case` type names. The canonical `src/Types.mo` uses `PascalCase` for type names (field names and method names stay `snake_case`). The TL;DR and steps below include the conversion.
