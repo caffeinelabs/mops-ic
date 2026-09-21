@@ -1,3 +1,42 @@
+## 5.0.0
+
+Regenerated from the upstream Candid spec through interface spec 0.68.0 (dfinity/developer-docs#254, #252, #346, #315, #302). Motoko record literals must name every field, so the new input/status fields below are breaking even though they are optional in Candid.
+
+### Migration
+
+Hand-built `IC.HttpRequestArgs`, `IC.CanisterSettings`, `IC.FetchCanisterLogsArgs`, and `CanisterStatusResult.memory_metrics` literals need the new fields (use `null` for optional ones):
+
+```motoko
+// before
+let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_bytes; transform; is_replicated };
+
+// after
+let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_bytes; transform; is_replicated; pricing_version = null };
+```
+
+`Call.httpRequest` is unchanged: it still takes `IC.HttpRequestArgs` and still attaches the version-1 (`ic0.cost_http_request`) cost. Pass `pricing_version = ?2` only after computing and attaching a version-2 reservation yourself (`ic0.cost_http_request_v2`; Motoko primitives for that are not in `moc` 1.16.1 yet).
+
+`IC.StatusVisibility` spells the Candid `public` case as `#public_` (Motoko reserved word).
+
+### Breaking changes
+
+- `CanisterSettings` / `DefiniteCanisterSettings`: added `minimum_incoming_canister_call_cycles` (spec 0.64.0, dfinity/developer-docs#302), `log_memory_limit` (spec 0.67.0, dfinity/developer-docs#252), `status_visibility` (spec 0.65.0, dfinity/developer-docs#315).
+- `HttpRequestArgs`: added `pricing_version : ?Nat32` — `1` (legacy, default, deprecated) or `2` (pay-as-you-go). Spec 0.68.0, dfinity/developer-docs#254.
+- `FetchCanisterLogsArgs`: added `filter : ?{ #by_idx; #by_timestamp_nanos }` (spec 0.67.0, dfinity/developer-docs#252).
+- `CanisterStatusResult.memory_metrics`: added `log_memory_store_size : Nat` (spec 0.67.0).
+
+### Additive changes
+
+- New types: `StatusVisibility`, `FlexibleHttpRequestArgs`, `FlexibleHttpRequestErr`, `FlexibleHttpRequestResult`, `HttpRequestResourceReport`.
+- New method: `ic.flexible_http_request` — committee of nodes return individual HTTP responses instead of subnet consensus (spec 0.68.0, dfinity/developer-docs#254).
+- `canister_info` is now a query method on `Types.Self` (spec 0.67.0, dfinity/developer-docs#346); inter-canister update calls still work.
+
+### Housekeeping
+
+- Refreshed `did/ic.did` from `dfinity/developer-docs` main (spec 0.64.0–0.68.0).
+- `REGENERATING.md`: install `didc` 0.6.2 from the GitHub release instead of building from source.
+- `[toolchain] moc` raised to `1.16.1`. `[requirements] moc` stays `1.4.0` (`Float32`).
+
 ## 4.2.0
 
 ### Additive changes
