@@ -35,7 +35,7 @@ let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_by
 
 - Refreshed `did/ic.did` from `dfinity/developer-docs` main (spec 0.64.0–0.68.0).
 - `REGENERATING.md`: install `didc` 0.6.2 from the GitHub release instead of building from source.
-- `[toolchain] moc` raised to `1.16.1`. `[requirements] moc` stays `1.4.0` (`Float32`).
+- `[toolchain] moc` raised to `1.16.1`. `[requirements] moc` stays `1.4.0` (`Float32`). `Call.Cost.httpRequest` uses `Array.values()` instead of the `.vals()` that `moc` 1.16 deprecates (`M0269`).
 
 ## 4.2.0
 
