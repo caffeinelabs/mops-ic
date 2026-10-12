@@ -87,6 +87,7 @@ module {
     public func signWithEcdsa(keyName : Text, curve : IC.EcdsaCurve) : Result<Nat, SignError> {
       let curveEncoding : Nat32 = switch (curve) {
         case (#secp256k1) 0;
+        case (#secp256r1) 1;
       };
       let (code, cyclesOrArbitrary) = Prim.costSignWithEcdsa(keyName, curveEncoding);
       switch (code) {

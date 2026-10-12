@@ -1,6 +1,6 @@
 ## 5.0.0
 
-Regenerated from the upstream Candid spec through interface spec 0.68.0 (dfinity/developer-docs#254, #252, #346, #315, #302). Motoko record literals must name every field, so the new input/status fields below are breaking even though they are optional in Candid.
+Regenerated from the upstream Candid spec through interface spec 0.70.0 (dfinity/developer-docs#394, #333, #254, #252, #346, #315, #302). Motoko record literals must name every field, so the new input/status fields below are breaking even though they are optional in Candid.
 
 ### Migration
 
@@ -14,7 +14,7 @@ let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_by
 let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_bytes; transform; is_replicated; pricing_version = null };
 ```
 
-`Call.httpRequest` is unchanged: it still takes `IC.HttpRequestArgs` and still attaches the version-1 (`ic0.cost_http_request`) cost. Pass `pricing_version = ?2` only after computing and attaching a version-2 reservation yourself (`ic0.cost_http_request_v2`; Motoko primitives for that are not in `moc` 1.16.1 yet).
+`Call.httpRequest` is unchanged: it still takes `IC.HttpRequestArgs` and still attaches the version-1 (`ic0.cost_http_request`) cost. Pass `pricing_version = ?2` only after computing and attaching a version-2 reservation yourself (`ic0.cost_http_request_v2`; Motoko primitives for that are not in `moc` 2.0.0 yet).
 
 `IC.StatusVisibility` spells the Candid `public` case as `#public_` (Motoko reserved word).
 
@@ -27,15 +27,17 @@ let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_by
 
 ### Additive changes
 
-- New types: `StatusVisibility`, `FlexibleHttpRequestArgs`, `FlexibleHttpRequestErr`, `FlexibleHttpRequestResult`, `HttpRequestResourceReport`.
+- New types: `StatusVisibility`, `FlexibleHttpRequestArgs`, `FlexibleHttpRequestErr`, `FlexibleHttpRequestResult`, `HttpRequestResourceReport`, `SubnetMetricsArgs`, `SubnetMetricsResult`.
 - New method: `ic.flexible_http_request` — committee of nodes return individual HTTP responses instead of subnet consensus (spec 0.68.0, dfinity/developer-docs#254).
+- New method: `ic.subnet_metrics` (update) — subnet-wide metrics for a subnet: `block_height`, `num_canisters`, `canister_state_bytes`, `consumed_cycles_total`, `update_transactions_total`, and `million_round_instructions_total` (instructions in units of one million, rounded up). Experimental. Spec 0.69.0, dfinity/developer-docs#333.
+- `EcdsaCurve` gains `#secp256r1` (threshold ECDSA on NIST P-256; signatures and SLIP-10 derivation match `secp256k1`). `Call.Cost.signWithEcdsa` maps it to `1`, the `ic0.cost_sign_with_ecdsa` curve argument. Spec 0.70.0, dfinity/developer-docs#394. Exhaustive `switch`es on `EcdsaCurve` must handle the new case; constructing `#secp256k1` is unchanged.
 - `canister_info` is now a query method on `Types.Self` (spec 0.67.0, dfinity/developer-docs#346); inter-canister update calls still work.
 
 ### Housekeeping
 
-- Refreshed `did/ic.did` from `dfinity/developer-docs` main (spec 0.64.0–0.68.0).
+- Refreshed `did/ic.did` from `dfinity/developer-docs` main (spec 0.64.0–0.70.0).
 - `REGENERATING.md`: install `didc` 0.6.2 from the GitHub release instead of building from source.
-- `[toolchain] moc` raised to `1.16.1`. `[requirements] moc` stays `1.4.0` (`Float32`). `Call.Cost.httpRequest` uses `Array.values()` instead of the `.vals()` that `moc` 1.16 deprecates (`M0269`).
+- `[toolchain] moc` raised to `2.0.0`. `[requirements] moc` stays `1.4.0` (`Float32`). Dropped `--default-persistent-actors` from `[moc].args` (`moc` 2.0 removes the flag; actors are persistent by default). `Call.Cost.httpRequest` uses `Array.values()` instead of the `.vals()` that `moc` 1.16 deprecates (`M0269`).
 
 ## 4.2.0
 

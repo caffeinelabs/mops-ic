@@ -201,7 +201,7 @@ module {
     snapshot_id : SnapshotId;
   };
   public type DepositCyclesArgs = { canister_id : CanisterId };
-  public type EcdsaCurve = { #secp256k1 };
+  public type EcdsaCurve = { #secp256k1; #secp256r1 };
   public type EcdsaPublicKeyArgs = {
     key_id : { name : Text; curve : EcdsaCurve };
     canister_id : ?CanisterId;
@@ -431,6 +431,50 @@ module {
     replica_version : Text;
     registry_version : Nat64;
   };
+  public type SubnetMetricsArgs = { subnet_id : Principal };
+  /// Only `block_height` describes the block in whose execution the call is
+  /// processed. The other five fields are aggregates refreshed at block
+  /// boundaries, so they describe the subnet as of an earlier block, and they are
+  /// not all refreshed at the same rate; see the individual fields.
+  public type SubnetMetricsResult = {
+    /// Total size in bytes of the state taken by canisters on the subnet. A
+    /// current value, not a counter. Recomputing it is expensive, so it is
+    /// refreshed only every 10 blocks, at heights that are multiples of 10. It
+    /// can be up to 10 blocks behind block_height and up to 9 blocks behind the
+    /// other aggregates. Reads 0 until the first refresh after subnet creation.
+    canister_state_bytes : Nat;
+    /// Total nominal cycles accounted for by the subnet: the historical
+    /// consumption of current and deleted canisters (plus the remaining balances
+    /// of deleted canisters), the cycles charged for HTTPS outcalls, threshold
+    /// signature requests, and vetKD requests (accounted for at the subnet level
+    /// rather than per canister), and the cycles lost when messages or refunds
+    /// are dropped (e.g. because their recipient no longer exists). Resource use
+    /// is recorded at normal cost-schedule rates even where it is free, so this
+    /// is not a count of cycles burned. Refunds of prepaid charges reduce the
+    /// total. Subnet splitting redistributes canisters' histories, so the total
+    /// can decrease and can include consumption from before the receiving subnet
+    /// was created.
+    consumed_cycles_total : Nat;
+    /// Total number of transactions processed on the subnet, i.e. the total
+    /// number of messages executed in the replicated mode. Monotonically
+    /// non-decreasing.
+    update_transactions_total : Nat;
+    /// Current block height of the subnet, i.e. the height of the block in
+    /// whose execution this call is processed. Monotonically non-decreasing for
+    /// a given subnet; the heights of different subnets are unrelated.
+    block_height : Nat;
+    /// Number of canisters on the subnet. A current value, not a counter.
+    num_canisters : Nat;
+    /// Total instructions the subnet accounted for when executing its blocks,
+    /// in units of one million and rounded up: a value of 42 represents
+    /// 41,000,001 through 42,000,000 instructions. Besides the executed Wasm
+    /// instructions, it covers the fixed per-execution and per-canister
+    /// overheads charged by the scheduler and the charges for work performed
+    /// outside of Wasm execution, so it is not a Wasm instruction meter.
+    /// Monotonically non-decreasing. Like `block_height`, it has no counterpart
+    /// under `/subnet/<subnet_id>/metrics` in the certified state tree.
+    million_round_instructions_total : Nat;
+  };
   public type TakeCanisterSnapshotArgs = {
     replace_snapshot : ?SnapshotId;
     canister_id : CanisterId;
@@ -543,6 +587,7 @@ module {
     stored_chunks : shared StoredChunksArgs -> async StoredChunksResult;
     /// subnet info
     subnet_info : shared SubnetInfoArgs -> async SubnetInfoResult;
+    subnet_metrics : shared SubnetMetricsArgs -> async SubnetMetricsResult;
     /// Canister snapshots
     take_canister_snapshot : shared TakeCanisterSnapshotArgs -> async TakeCanisterSnapshotResult;
     uninstall_code : shared UninstallCodeArgs -> async ();
