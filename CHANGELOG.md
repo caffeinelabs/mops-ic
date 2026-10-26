@@ -14,7 +14,7 @@ let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_by
 let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_bytes; transform; is_replicated; pricing_version = null };
 ```
 
-`Call.httpRequest` is unchanged: it still takes `IC.HttpRequestArgs` and still attaches the version-1 (`ic0.cost_http_request`) cost. Pass `pricing_version = ?2` only after computing and attaching a version-2 reservation yourself (`ic0.cost_http_request_v2`; Motoko primitives for that are not in `moc` 2.0.0 yet).
+`Call.httpRequest` is unchanged: it still takes `IC.HttpRequestArgs` and still attaches the version-1 (`ic0.cost_http_request`) cost. Pass `pricing_version = ?2` only after computing and attaching a version-2 reservation yourself. `moc` 2.1.0 exposes `Prim.costHttpRequestV2` (`ic0.cost_http_request_v2`); this package does not call it.
 
 `IC.StatusVisibility` spells the Candid `public` case as `#public_` (Motoko reserved word).
 
@@ -37,7 +37,7 @@ let request : IC.HttpRequestArgs = { url; method; headers; body; max_response_by
 
 - Refreshed `did/ic.did` from `dfinity/developer-docs` main (spec 0.64.0–0.70.0).
 - `REGENERATING.md`: install `didc` 0.6.2 from the GitHub release instead of building from source.
-- `[toolchain] moc` raised to `2.0.0`. `[requirements] moc` stays `1.4.0` (`Float32`). Dropped `--default-persistent-actors` from `[moc].args` (`moc` 2.0 removes the flag; actors are persistent by default). `Call.Cost.httpRequest` uses `Array.values()` instead of the `.vals()` that `moc` 1.16 deprecates (`M0269`).
+- `[toolchain] moc` raised to `2.1.0`. `[requirements] moc` stays `1.4.0` (`Float32`). Dropped `--default-persistent-actors` from `[moc].args` (`moc` 2.0 removes the flag; actors are persistent by default). `Call.Cost.httpRequest` uses `Array.values()` instead of the `.vals()` that `moc` 1.16 deprecates (`M0269`).
 
 ## 4.2.0
 
