@@ -44,10 +44,13 @@ let settings : IC.CanisterSettings = {
 	freezing_threshold = null;
 	reserved_cycles_limit = null;
 	log_visibility = null;
+	log_memory_limit = null;
 	snapshot_visibility = null;
 	wasm_memory_limit = null;
 	wasm_memory_threshold = null;
 	environment_variables = null;
+	minimum_incoming_canister_call_cycles = null;
+	status_visibility = null;
 };
 await ic.update_settings({
 	canister_id = canisterId;

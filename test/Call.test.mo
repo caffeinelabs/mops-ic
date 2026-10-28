@@ -154,6 +154,7 @@ actor {
     max_response_bytes = null;
     transform = null;
     is_replicated = null;
+    pricing_version = null;
   };
   let headers = [{ name = "x-test"; value = "test" }];
   let body = ?to_candid ([1, 2, 3]);

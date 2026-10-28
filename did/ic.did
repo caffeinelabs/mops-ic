@@ -14,7 +14,13 @@ type snapshot_visibility = variant {
     allowed_viewers : vec principal;
 };
 
-type environment_variable = record { 
+type status_visibility = variant {
+    controllers;
+    public;
+    allowed_viewers : vec principal;
+};
+
+type environment_variable = record {
     name: text; 
     value: text;
 };
@@ -25,8 +31,11 @@ type canister_settings = record {
     memory_allocation : opt nat;
     freezing_threshold : opt nat;
     reserved_cycles_limit : opt nat;
+    minimum_incoming_canister_call_cycles : opt nat;
     log_visibility : opt log_visibility;
+    log_memory_limit : opt nat;
     snapshot_visibility : opt snapshot_visibility;
+    status_visibility : opt status_visibility;
     wasm_memory_limit : opt nat;
     wasm_memory_threshold : opt nat;
     environment_variables : opt vec environment_variable;
@@ -38,8 +47,11 @@ type definite_canister_settings = record {
     memory_allocation : nat;
     freezing_threshold : nat;
     reserved_cycles_limit : nat;
+    minimum_incoming_canister_call_cycles : nat;
     log_visibility : log_visibility;
+    log_memory_limit : nat;
     snapshot_visibility : snapshot_visibility;
+    status_visibility : status_visibility;
     wasm_memory_limit : nat;
     wasm_memory_threshold : nat;
     environment_variables : vec environment_variable;
@@ -112,8 +124,37 @@ type http_request_result = record {
     body : blob;
 };
 
+type http_request_resource_report = record {
+    raw_response_bytes : opt variant { used : nat64; exceeded : reserved };
+    http_roundtrip_time_ms : opt variant { used : nat64; exceeded : reserved };
+    transform_instructions : opt variant { used : nat64; exceeded : reserved };
+    transformed_response_bytes : opt variant { used : nat64; exceeded : reserved };
+    cycles : opt variant { used : nat; exceeded : reserved };
+};
+
+type flexible_http_request_err = record {
+    global_error : opt variant {
+        timeout : reserved;
+        out_of_cycles : reserved;
+        responses_too_large : reserved;
+        too_many_rejects : reserved;
+    };
+    node_details : vec record {
+        node_id : principal;
+        report : http_request_resource_report;
+        error : opt record { code : text; message : text };
+    };
+    message : text;
+};
+
+type flexible_http_request_result = variant {
+    ok : vec http_request_result;
+    err : flexible_http_request_err;
+};
+
 type ecdsa_curve = variant {
     secp256k1;
+    secp256r1;
 };
 
 type vetkd_curve = variant {
@@ -300,6 +341,7 @@ type canister_status_result = record {
         canister_history_size : nat;
         wasm_chunk_store_size : nat;
         snapshots_size : nat;
+        log_memory_store_size : nat;
     };
     cycles : nat;
     reserved_cycles : nat;
@@ -352,6 +394,24 @@ type http_request_args = record {
         context : blob;
     };
     is_replicated : opt bool;
+    pricing_version : opt nat32;
+};
+
+type flexible_http_request_args = record {
+    url : text;
+    max_response_bytes : opt nat64;
+    method : variant { get; head; post; put; delete; patch };
+    headers : vec http_header;
+    body : opt blob;
+    transform : opt record {
+        function : func(record { response : http_request_result; context : blob }) -> (http_request_result) query;
+        context : blob;
+    };
+    replication : opt record {
+        min_responses : nat32;
+        max_responses : nat32;
+        total_requests : nat32;
+    };
 };
 
 type ecdsa_public_key_args = record {
@@ -434,6 +494,54 @@ type node_metrics_history_result = vec record {
     node_metrics : vec node_metrics;
 };
 
+type subnet_metrics_args = record {
+    subnet_id : principal;
+};
+
+// Only `block_height` describes the block in whose execution the call is
+// processed. The other five fields are aggregates refreshed at block
+// boundaries, so they describe the subnet as of an earlier block, and they are
+// not all refreshed at the same rate; see the individual fields.
+type subnet_metrics_result = record {
+    // Current block height of the subnet, i.e. the height of the block in
+    // whose execution this call is processed. Monotonically non-decreasing for
+    // a given subnet; the heights of different subnets are unrelated.
+    block_height : nat;
+    // Number of canisters on the subnet. A current value, not a counter.
+    num_canisters : nat;
+    // Total size in bytes of the state taken by canisters on the subnet. A
+    // current value, not a counter. Recomputing it is expensive, so it is
+    // refreshed only every 10 blocks, at heights that are multiples of 10. It
+    // can be up to 10 blocks behind block_height and up to 9 blocks behind the
+    // other aggregates. Reads 0 until the first refresh after subnet creation.
+    canister_state_bytes : nat;
+    // Total nominal cycles accounted for by the subnet: the historical
+    // consumption of current and deleted canisters (plus the remaining balances
+    // of deleted canisters), the cycles charged for HTTPS outcalls, threshold
+    // signature requests, and vetKD requests (accounted for at the subnet level
+    // rather than per canister), and the cycles lost when messages or refunds
+    // are dropped (e.g. because their recipient no longer exists). Resource use
+    // is recorded at normal cost-schedule rates even where it is free, so this
+    // is not a count of cycles burned. Refunds of prepaid charges reduce the
+    // total. Subnet splitting redistributes canisters' histories, so the total
+    // can decrease and can include consumption from before the receiving subnet
+    // was created.
+    consumed_cycles_total : nat;
+    // Total number of transactions processed on the subnet, i.e. the total
+    // number of messages executed in the replicated mode. Monotonically
+    // non-decreasing.
+    update_transactions_total : nat;
+    // Total instructions the subnet accounted for when executing its blocks,
+    // in units of one million and rounded up: a value of 42 represents
+    // 41,000,001 through 42,000,000 instructions. Besides the executed Wasm
+    // instructions, it covers the fixed per-execution and per-canister
+    // overheads charged by the scheduler and the charges for work performed
+    // outside of Wasm execution, so it is not a Wasm instruction meter.
+    // Monotonically non-decreasing. Like `block_height`, it has no counterpart
+    // under `/subnet/<subnet_id>/metrics` in the certified state tree.
+    million_round_instructions_total : nat;
+};
+
 type subnet_info_args = record {
     subnet_id : principal;
 };
@@ -499,6 +607,10 @@ type delete_canister_snapshot_args = record {
 
 type fetch_canister_logs_args = record {
     canister_id : canister_id;
+    filter : opt variant {
+        by_idx : record { start : nat64; end : nat64 };
+        by_timestamp_nanos : record { start : nat64; end : nat64 };
+    };
 };
 
 type canister_log_record = record {
@@ -672,9 +784,10 @@ service ic : {
     deposit_cycles : (deposit_cycles_args) -> ();
     raw_rand : () -> (raw_rand_result);
     http_request : (http_request_args) -> (http_request_result);
+    flexible_http_request : (flexible_http_request_args) -> (flexible_http_request_result);
 
     // Public canister data
-    canister_info : (canister_info_args) -> (canister_info_result);
+    canister_info : (canister_info_args) -> (canister_info_result) query;
     canister_metadata : (canister_metadata_args) -> (canister_metadata_result);
 
     // Threshold ECDSA signature
@@ -698,6 +811,7 @@ service ic : {
 
     // metrics interface
     node_metrics_history : (node_metrics_history_args) -> (node_metrics_history_result);
+    subnet_metrics : (subnet_metrics_args) -> (subnet_metrics_result);
 
     // subnet info
     subnet_info : (subnet_info_args) -> (subnet_info_result);

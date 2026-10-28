@@ -87,6 +87,7 @@ module {
     public func signWithEcdsa(keyName : Text, curve : IC.EcdsaCurve) : Result<Nat, SignError> {
       let curveEncoding : Nat32 = switch (curve) {
         case (#secp256k1) 0;
+        case (#secp256r1) 1;
       };
       let (code, cyclesOrArbitrary) = Prim.costSignWithEcdsa(keyName, curveEncoding);
       switch (code) {
@@ -118,7 +119,7 @@ module {
       size += Prim.natToNat64(request.url.size());
 
       // Add headers byte length (sum of all names and values)
-      for (header in request.headers.vals()) {
+      for (header in request.headers.values()) {
         size += Prim.natToNat64(header.name.size());
         size += Prim.natToNat64(header.value.size());
       };
