@@ -78,6 +78,8 @@ jobs:
         if: steps.decide.outputs.publish == 'true'
         uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
         with:
+          # Matches mops-test.yml: `mops publish` runs the tests, which need the dfx replica.
+          mops-version: 2.24.0
           identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       - name: Install packages

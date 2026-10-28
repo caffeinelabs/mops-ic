@@ -16,6 +16,11 @@ jobs:
         with:
           node-version: 20
       - uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
+        with:
+          # mops 3 runs replica tests only on PocketIC, which has no chain-key
+          # signing keys or HTTP outcalls; these tests need the dfx replica,
+          # which only mops 2.x supports.
+          mops-version: 2.24.0
 
       - name: Install dfx
         # Pinned to last dfx that auto-configures tECDSA / tSchnorr keys on the
