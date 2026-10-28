@@ -17,6 +17,17 @@ import IC "mo:ic/Types";
 
 `ic` is the management canister actor; `IC` is the module of request/response types.
 
+### Make an HTTPS outcall
+`Call.httpRequest` prices the outcall with pricing version 2 and attaches the cycles. Each `withExpected*` setter lowers the reservation; unspent cycles are refunded.
+```motoko
+import Call "mo:ic/Call";
+
+let response = await Call.httpRequest("https://example.com/api")
+	.withMaxResponseBytes(4_000)
+	.withExpectedRoundtripTimeMs(300)
+	.send();
+```
+
 ### Fetch canister status
 ```motoko
 import { ic } "mo:ic";

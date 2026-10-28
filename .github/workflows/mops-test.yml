@@ -36,4 +36,26 @@ jobs:
         run: mops install
 
       - name: run tests
-        run: mops test
+        # The dfx replica implements an earlier draft of `ic0.cost_http_request_v2`,
+        # so the HTTPS outcall tests run in the `test-pocket-ic` job instead.
+        run: mops test --replica dfx Call
+
+  test-pocket-ic:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+      - uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
+        with:
+          # PocketIC 16 implements `ic0.cost_http_request_v2` as specified, and
+          # mops 3 runs replica tests on the version `[toolchain]` pins.
+          mops-version: 3.5.1
+
+      - name: install mops packages
+        run: mops install
+
+      - name: run tests
+        run: mops test HttpRequest
