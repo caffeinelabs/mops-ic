@@ -1,3 +1,45 @@
+## 6.0.0
+
+HTTPS outcalls move to pricing version `2` ("pay-as-you-go"), which charges for the resources a call consumes rather than for `max_response_bytes`. Costs come from `Prim.costHttpRequestV2` (`ic0.cost_http_request_v2`), so this release requires `moc` 2.1.0.
+
+### Migration
+
+`Call.httpRequest` changes from `(IC.HttpRequestArgs) -> async IC.HttpRequestResult` to a builder that always sets `pricing_version = ?2`:
+
+```motoko
+// before
+let response = await Call.httpRequest(args);
+
+// after: keep building the arguments as before
+let response = await Call.httpRequestFromArgs(args).send();
+
+// or build them in place, and narrow the reservation with what the call is expected to use
+let response = await Call.httpRequest("https://example.com/api")
+  .withMethod(#post)
+  .withMaxResponseBytes(4_000)
+  .withExpectedRoundtripTimeMs(300)
+  .send();
+```
+
+Every call site fails to compile until it migrates. Switching the pricing version under an unchanged signature would have been silent.
+
+### Breaking changes
+
+- `Call.httpRequest(url)` returns a `Call.HttpRequest` builder. `Call.httpRequestFromArgs(args)` starts one from existing arguments and overwrites `pricing_version` with `?2`.
+- `Call.Cost.httpRequest(args, expected)` prices version `2` and takes a `Call.Cost.ExpectedUsage`. Pass `Call.Cost.worstCase` for the reservation the builder attaches by default. The version `1` `Call.Cost.httpRequest(args)` is removed; `Prim.costHttpRequest` still exposes it.
+- `[requirements] moc` raised to `2.1.0`, the first release with `Prim.costHttpRequestV2`.
+
+### Additive changes
+
+- `Call.flexibleHttpRequest(url)` and `Call.flexibleHttpRequestFromArgs(args)` build a `flexible_http_request`, in which a committee of nodes return their individual responses. `Call.Cost.flexibleHttpRequest(args, expected)` prices one.
+- Both builders take `withExpected*` setters. Under version `2` the attached cycles are also each node's budget, so anything left unset falls back to the most the outcall could consume. Unspent cycles are refunded.
+- A request without a `transform` reserves nothing for one. A flexible outcall with `replication` set caps its expected transformed size at the result limit divided by `min_responses`, since larger responses cannot all be delivered.
+- New types: `Call.HttpMethod`, `Call.Transform`, `Call.ReplicationCounts`, `Call.HttpRequest`, `Call.FlexibleHttpRequest`, and `Call.Cost.ExpectedUsage`.
+
+### Housekeeping
+
+- `[toolchain] pocket-ic` pinned to `16.1.0`. The HTTPS outcall tests moved to `test/HttpRequest.test.mo` and run on PocketIC in a new `test-pocket-ic` CI job, because the `dfx` 0.30.1 replica implements an earlier draft of `ic0.cost_http_request_v2`. PocketIC makes no outcalls under `mops test`, so those tests check pricing only.
+
 ## 5.0.0
 
 Regenerated from the upstream Candid spec through interface spec 0.70.0 (dfinity/developer-docs#394, #333, #254, #252, #346, #315, #302). Motoko record literals must name every field, so the new input/status fields below are breaking even though they are optional in Candid.
