@@ -1,5 +1,6 @@
 import Blob "mo:core/Blob";
 import Nat32 "mo:core/Nat32";
+import Prim "mo:prim";
 import { suite; test; expect } "mo:test/async";
 
 import IC "../src/Types";
@@ -98,6 +99,69 @@ actor {
     );
 
     await suite(
+      "cost matches the system API on the specified parameters",
+      func() : async () {
+        await test(
+          "default reservation",
+          func() : async () {
+            expect.nat(Call.httpRequestFromArgs(request).getCost()).equal(systemCost(worstCaseParams(15, null)));
+          },
+        );
+        await test(
+          "expected usage, field by field",
+          func() : async () {
+            let cost = Call.httpRequest(request.url)
+              .withExpectedRoundtripTimeMs(300)
+              .withExpectedRawResponseBytes(1_000)
+              .withExpectedTransformedResponseBytes(2_000)
+              .withExpectedTransformInstructions(7_000_000)
+              .getCost();
+            let params = {
+              request_bytes : Nat64 = 15;
+              http_roundtrip_time_ms : Nat64 = 300;
+              raw_response_bytes : Nat64 = 1_000;
+              transformed_response_bytes : Nat64 = 2_000;
+              transform_instructions : Nat64 = 7_000_000;
+              outcall_type = null;
+            };
+            expect.nat(cost).equal(systemCost(params));
+          },
+        );
+        await test(
+          "non-replicated",
+          func() : async () {
+            let cost = Call.httpRequestFromArgs(request).nonReplicated().getCost();
+            expect.nat(cost).equal(systemCost(worstCaseParams(15, ?(#non_replicated(null)))));
+          },
+        );
+        await test(
+          "request bytes in UTF-8",
+          func() : async () {
+            // 17 characters, 18 bytes.
+            let cost = Call.httpRequest("https://ic0.app/ü").getCost();
+            expect.nat(cost).equal(systemCost(worstCaseParams(18, null)));
+          },
+        );
+        await test(
+          "flexible, with transformed bytes capped by min_responses",
+          func() : async () {
+            let counts = { min_responses : Nat32 = 2; max_responses : Nat32 = 3; total_requests : Nat32 = 3 };
+            let cost = Call.flexibleHttpRequest(request.url).withReplication(counts).getCost();
+            let params = { worstCaseParams(15, ?(#flexible_(?counts))) with transformed_response_bytes : Nat64 = 1_048_576 };
+            expect.nat(cost).equal(systemCost(params));
+          },
+        );
+        await test(
+          "flexible, with the endpoint's default replication",
+          func() : async () {
+            let cost = Call.flexibleHttpRequest(request.url).getCost();
+            expect.nat(cost).equal(systemCost(worstCaseParams(15, ?(#flexible_(null)))));
+          },
+        );
+      },
+    );
+
+    await suite(
       "flexible_http_request cost",
       func() : async () {
         await test(
@@ -138,6 +202,32 @@ actor {
         );
       },
     );
+  };
+
+  // The argument of `ic0.cost_http_request_v2`, as the interface specification defines it.
+  type CostParams = {
+    request_bytes : Nat64;
+    http_roundtrip_time_ms : Nat64;
+    raw_response_bytes : Nat64;
+    transformed_response_bytes : Nat64;
+    transform_instructions : Nat64;
+    outcall_type : ?{
+      #fully_replicated : Any;
+      #non_replicated : Any;
+      #flexible_ : ?Call.ReplicationCounts;
+    };
+  };
+
+  func systemCost(params : CostParams) : Nat = Prim.costHttpRequestV2(to_candid (params));
+
+  // The specified maxima for a request without `max_response_bytes` or a transform.
+  func worstCaseParams(requestBytes : Nat64, outcallType : ?{ #fully_replicated : Any; #non_replicated : Any; #flexible_ : ?Call.ReplicationCounts }) : CostParams = {
+    request_bytes = requestBytes;
+    http_roundtrip_time_ms = 60_000;
+    raw_response_bytes = 2_000_000;
+    transformed_response_bytes = 2_001_024;
+    transform_instructions = 0;
+    outcall_type = outcallType;
   };
 
   public shared query func transformFunction({

@@ -28,17 +28,20 @@ Every call site fails to compile until it migrates. Switching the pricing versio
 - `Call.httpRequest(url)` returns a `Call.HttpRequest` builder. `Call.httpRequestFromArgs(args)` starts one from existing arguments and overwrites `pricing_version` with `?2`.
 - `Call.Cost.httpRequest(args, expected)` prices version `2` and takes a `Call.Cost.ExpectedUsage`. Pass `Call.Cost.worstCase` for the reservation the builder attaches by default. The version `1` `Call.Cost.httpRequest(args)` is removed; `Prim.costHttpRequest` still exposes it.
 - `[requirements] moc` raised to `2.1.0`, the first release with `Prim.costHttpRequestV2`.
+- Every canister that imports `mo:ic/Call` now imports `ic0.cost_http_request_v2`, even if it never makes an outcall. Replicas without that system API refuse to install the canister. Replicas with an earlier draft of it, such as the one in `dfx` 0.30.1, install it but trap in `getCost()` and `send()`. Use a replica that implements the API as specified, such as PocketIC 16.1.0.
 
 ### Additive changes
 
 - `Call.flexibleHttpRequest(url)` and `Call.flexibleHttpRequestFromArgs(args)` build a `flexible_http_request`, in which a committee of nodes return their individual responses. `Call.Cost.flexibleHttpRequest(args, expected)` prices one.
 - Both builders take `withExpected*` setters. Under version `2` the attached cycles are also each node's budget, so anything left unset falls back to the most the outcall could consume. Unspent cycles are refunded.
-- A request without a `transform` reserves nothing for one. A flexible outcall with `replication` set caps its expected transformed size at the result limit divided by `min_responses`, since larger responses cannot all be delivered.
+- A request without a `transform` reserves nothing for one.
+- A flexible outcall with `replication` set reserves each node's transformed response at the result limit divided by `min_responses`. That covers delivering any result that fits the limit, but a node whose own response is larger can still run out of budget and reject. Without `replication`, each node reserves for a full-size response. On a 13-node subnet that's about 8 times what passing the endpoint's default counts explicitly reserves. The surplus is refunded, but the canister must hold it while the call runs.
 - New types: `Call.HttpMethod`, `Call.Transform`, `Call.ReplicationCounts`, `Call.HttpRequest`, `Call.FlexibleHttpRequest`, and `Call.Cost.ExpectedUsage`.
 
 ### Housekeeping
 
 - `[toolchain] pocket-ic` pinned to `16.1.0`. The HTTPS outcall tests moved to `test/HttpRequest.test.mo` and run on PocketIC in a new `test-pocket-ic` CI job, because the `dfx` 0.30.1 replica implements an earlier draft of `ic0.cost_http_request_v2`. PocketIC makes no outcalls under `mops test`, so those tests check pricing only.
+- `mops-publish.yml` runs the same split, then `mops publish --no-test`, because `mops publish` runs every test file on a single replica.
 
 ## 5.0.0
 

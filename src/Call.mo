@@ -224,8 +224,8 @@ module {
 
     /// The resources a caller expects an outcall to consume.
     ///
-    /// A field left `null` falls back to the most that resource could reach. That reservation cannot
-    /// run short, but it holds far more cycles while the outcall runs.
+    /// A field left `null` falls back to the most that resource could reach, which holds far more cycles
+    /// while the outcall runs.
     public type ExpectedUsage = {
       roundtripTimeMs : ?Nat64;
       rawResponseBytes : ?Nat64;
@@ -257,9 +257,10 @@ module {
 
     /// The cycles to attach to a `flexible_http_request`.
     ///
-    /// Without an explicit `transformedResponseBytes`, the reservation assumes responses no larger
-    /// than the result limit divided by `min_responses`, since larger ones cannot all be delivered.
-    /// That cap needs `replication` to be set; without it, the reservation assumes full-size responses.
+    /// Without an explicit `transformedResponseBytes` but with `replication` set, each node's budget covers
+    /// a response of the result limit divided by `min_responses`. That covers delivering any result that fits
+    /// the limit, but a node whose own response is larger can still run out of budget and reject.
+    /// Without `replication`, each node's budget covers a full-size response.
     public func flexibleHttpRequest(args : IC.FlexibleHttpRequestArgs, expected : ExpectedUsage) : Nat {
       let (roundtrip, raw, transformed, instructions) = resolve(
         expected,
@@ -365,9 +366,10 @@ module {
     };
 
     func requestBytes(url : Text, headers : [IC.HttpHeader], body : ?Blob, transform : ?Transform) : Nat64 {
-      var size = Prim.natToNat64(url.size());
+      // The system charges UTF-8 bytes, which `Text.size()` undercounts for non-ASCII characters.
+      var size = utf8Bytes(url);
       for (header in headers.values()) {
-        size += Prim.natToNat64(header.name.size() + header.value.size());
+        size += utf8Bytes(header.name) + utf8Bytes(header.value);
       };
       switch (body) {
         case (?body) { size += Prim.natToNat64(body.size()) };
@@ -384,6 +386,8 @@ module {
       };
       size;
     };
+
+    func utf8Bytes(text : Text) : Nat64 = Prim.natToNat64(Prim.encodeUtf8(text).size());
   };
 
   public type SignError = {
