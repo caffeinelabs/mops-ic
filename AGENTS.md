@@ -8,8 +8,9 @@ This is a Motoko/mops project. There is no separate build, lint, or format step.
 
 ```bash
 mops install                      # install dependencies
-mops test --replica dfx Call      # mops 2.24.0 + dfx 0.30.1: create_canister, ECDSA, and Schnorr
-mops test HttpRequest             # mops 3 + PocketIC 16.1.0: HTTPS outcall pricing
+mops test --replica dfx Call                 # dfx 0.30.1: create_canister, ECDSA, and Schnorr
+mops test --replica pocket-ic HttpRequest    # PocketIC 16.1.0: HTTPS outcall pricing
+# CI and publishing run both with mops 2.24.0.
 ```
 
 CI (`.github/workflows/mops-test.yml`) runs both on push to `master` and on pull requests, as the `test` and `test-pocket-ic` jobs. `mops-publish.yml` runs both before `mops publish --no-test`, because `mops publish` runs every test file on one replica. The split exists because each replica lacks something the other has. The `dfx` 0.30.1 replica has chain-key signing keys and HTTP outcalls, but implements an earlier draft of `ic0.cost_http_request_v2` that rejects the specified parameters. PocketIC under `mops test` implements the spec, but has no signing keys and makes no outcalls.

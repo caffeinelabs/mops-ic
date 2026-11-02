@@ -128,6 +128,16 @@ actor {
           },
         );
         await test(
+          "transform",
+          func() : async () {
+            let cost = Call.httpRequestFromArgs({ request with transform }).getCost();
+            // The 5-byte context plus the encoded function reference, which stands in for the method name.
+            let transformBytes = Prim.natToNat64(5 + (to_candid (transformFunction)).size());
+            let params = { worstCaseParams(15 + transformBytes, null) with transform_instructions : Nat64 = 5_000_000_000 };
+            expect.nat(cost).equal(systemCost(params));
+          },
+        );
+        await test(
           "non-replicated",
           func() : async () {
             let cost = Call.httpRequestFromArgs(request).nonReplicated().getCost();

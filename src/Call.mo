@@ -9,6 +9,7 @@ import IC "Types";
 /// Provides wrapper functions for calls to the IC management canister that
 /// calculate cycles needed for the call and automatically add them to the call.
 /// Only minimal amount of cycles are added to the call. This helps the canister to make more calls in parallel without running out of cycles.
+/// HTTPS outcalls are the exception: they attach a reservation sized by the `withExpected*` setters, and unspent cycles are refunded.
 ///
 /// Cost calculation functions are in the `Cost` submodule.
 module {
@@ -38,9 +39,10 @@ module {
   /// The outcall is always made with pricing version `2` ("pay-as-you-go"), which charges for the
   /// resources the call actually consumes rather than for `max_response_bytes`.
   ///
-  /// Under version `2` the attached cycles are also the budget each node may spend on the outcall.
+  /// Under version `2` the attached cycles above the base fee are split into a budget for each node.
   /// Every `withExpected*` method narrows that budget; anything left unset falls back to the most
-  /// the outcall could consume.
+  /// the outcall could consume. A node that exceeds its budget rejects the call, possibly after the
+  /// request reached the server, so set expectations no lower than the outcall can use.
   ///
   /// ```motoko no-repl
   /// let response = await Call.httpRequest("https://example.com/api")
@@ -225,7 +227,7 @@ module {
     /// The resources a caller expects an outcall to consume.
     ///
     /// A field left `null` falls back to the most that resource could reach, which holds far more cycles
-    /// while the outcall runs.
+    /// while the outcall runs. An outcall that uses more than a field allows is rejected.
     public type ExpectedUsage = {
       roundtripTimeMs : ?Nat64;
       rawResponseBytes : ?Nat64;

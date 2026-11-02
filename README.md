@@ -5,7 +5,7 @@
 
 Motoko interface for the IC management canister (`aaaaa-aa`). The Motoko types are generated from the upstream Candid spec mirrored at [`did/ic.did`](./did/ic.did) (from [`dfinity/developer-docs`](https://github.com/dfinity/developer-docs/blob/main/public/references/ic.did)).
 
-See [Call](https://mops.one/ic/docs/Call) module documentation for automatic calculation of the minimum amount of cycles and attaching them to the call.
+See [Call](https://mops.one/ic/docs/Call) module documentation for automatic calculation of the cycles a call needs and attaching them to the call.
 
 ## Examples
 
@@ -18,7 +18,7 @@ import IC "mo:ic/Types";
 `ic` is the management canister actor; `IC` is the module of request/response types.
 
 ### Make an HTTPS outcall
-`Call.httpRequest` prices the outcall with pricing version 2 and attaches the cycles. Each `withExpected*` setter lowers the reservation; unspent cycles are refunded.
+`Call.httpRequest` prices the outcall with pricing version 2 and attaches the cycles. Each `withExpected*` setter lowers the reservation, and unspent cycles are refunded. An outcall that uses more than you set is rejected.
 ```motoko
 import Call "mo:ic/Call";
 

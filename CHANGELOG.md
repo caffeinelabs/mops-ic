@@ -33,7 +33,8 @@ Every call site fails to compile until it migrates. Switching the pricing versio
 ### Additive changes
 
 - `Call.flexibleHttpRequest(url)` and `Call.flexibleHttpRequestFromArgs(args)` build a `flexible_http_request`, in which a committee of nodes return their individual responses. `Call.Cost.flexibleHttpRequest(args, expected)` prices one.
-- Both builders take `withExpected*` setters. Under version `2` the attached cycles are also each node's budget, so anything left unset falls back to the most the outcall could consume. Unspent cycles are refunded.
+- Both builders take `withExpected*` setters. Under version `2` the attached cycles above the base fee are split into a budget for each node, so anything left unset falls back to the most the outcall could consume. Unspent cycles are refunded. A node that exceeds its budget rejects the call, possibly after the request reached the server.
+- The default reservation is larger than the version `1` cost, for example about 1.4 times for a request without `max_response_bytes`. The canister must hold it while the call runs.
 - A request without a `transform` reserves nothing for one.
 - A flexible outcall with `replication` set reserves each node's transformed response at the result limit divided by `min_responses`. That covers delivering any result that fits the limit, but a node whose own response is larger can still run out of budget and reject. Without `replication`, each node reserves for a full-size response. On a 13-node subnet that's about 8 times what passing the endpoint's default counts explicitly reserves. The surplus is refunded, but the canister must hold it while the call runs.
 - New types: `Call.HttpMethod`, `Call.Transform`, `Call.ReplicationCounts`, `Call.HttpRequest`, `Call.FlexibleHttpRequest`, and `Call.Cost.ExpectedUsage`.
