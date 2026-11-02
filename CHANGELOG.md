@@ -1,3 +1,49 @@
+## 6.0.0
+
+HTTPS outcalls move to pricing version `2` ("pay-as-you-go"), which charges for the resources a call consumes rather than for `max_response_bytes`. Costs come from `Prim.costHttpRequestV2` (`ic0.cost_http_request_v2`), so this release requires `moc` 2.1.0.
+
+### Migration
+
+`Call.httpRequest` changes from `(IC.HttpRequestArgs) -> async IC.HttpRequestResult` to a builder that always sets `pricing_version = ?2`:
+
+```motoko
+// before
+let response = await Call.httpRequest(args);
+
+// after: keep building the arguments as before
+let response = await Call.httpRequestFromArgs(args).send();
+
+// or build them in place, and narrow the reservation with what the call is expected to use
+let response = await Call.httpRequest("https://example.com/api")
+  .withMethod(#post)
+  .withMaxResponseBytes(4_000)
+  .withExpectedRoundtripTimeMs(300)
+  .send();
+```
+
+Every call site fails to compile until it migrates. Switching the pricing version under an unchanged signature would have been silent.
+
+### Breaking changes
+
+- `Call.httpRequest(url)` returns a `Call.HttpRequest` builder. `Call.httpRequestFromArgs(args)` starts one from existing arguments and overwrites `pricing_version` with `?2`.
+- `Call.Cost.httpRequest(args, expected)` prices version `2` and takes a `Call.Cost.ExpectedUsage`. Pass `Call.Cost.worstCase` for the reservation the builder attaches by default. The version `1` `Call.Cost.httpRequest(args)` is removed; `Prim.costHttpRequest` still exposes it.
+- `[requirements] moc` raised to `2.1.0`, the first release with `Prim.costHttpRequestV2`.
+- Every canister that imports `mo:ic/Call` now imports `ic0.cost_http_request_v2`, even if it never makes an outcall. Replicas without that system API refuse to install the canister. Replicas with an earlier draft of it, such as the one in `dfx` 0.30.1, install it but trap in `getCost()` and `send()`. Use a replica that implements the API as specified, such as PocketIC 16.1.0.
+
+### Additive changes
+
+- `Call.flexibleHttpRequest(url)` and `Call.flexibleHttpRequestFromArgs(args)` build a `flexible_http_request`, in which a committee of nodes return their individual responses. `Call.Cost.flexibleHttpRequest(args, expected)` prices one.
+- Both builders take `withExpected*` setters. Under version `2` the attached cycles above the base fee are split into a budget for each node, so anything left unset falls back to the most the outcall could consume. Unspent cycles are refunded. A node that exceeds its budget rejects the call, possibly after the request reached the server.
+- The default reservation is larger than the version `1` cost, for example about 1.4 times for a request without `max_response_bytes`. The canister must hold it while the call runs.
+- A request without a `transform` reserves nothing for one.
+- A flexible outcall with `replication` set reserves each node's transformed response at the result limit divided by `min_responses`. That covers delivering any result that fits the limit, but a node whose own response is larger can still run out of budget and reject. Without `replication`, each node reserves for a full-size response. On a 13-node subnet that's about 8 times what passing the endpoint's default counts explicitly reserves. The surplus is refunded, but the canister must hold it while the call runs.
+- New types: `Call.HttpMethod`, `Call.Transform`, `Call.ReplicationCounts`, `Call.HttpRequest`, `Call.FlexibleHttpRequest`, and `Call.Cost.ExpectedUsage`.
+
+### Housekeeping
+
+- `[toolchain] pocket-ic` pinned to `16.1.0`. The HTTPS outcall tests moved to `test/HttpRequest.test.mo` and run on PocketIC in a new `test-pocket-ic` CI job, because the `dfx` 0.30.1 replica implements an earlier draft of `ic0.cost_http_request_v2`. PocketIC makes no outcalls under `mops test`, so those tests check pricing only.
+- `mops-publish.yml` runs the same split, then `mops publish --no-test`, because `mops publish` runs every test file on a single replica.
+
 ## 5.0.0
 
 Regenerated from the upstream Candid spec through interface spec 0.70.0 (dfinity/developer-docs#394, #333, #254, #252, #346, #315, #302). Motoko record literals must name every field, so the new input/status fields below are breaking even though they are optional in Candid.

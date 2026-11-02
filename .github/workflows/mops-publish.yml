@@ -78,7 +78,7 @@ jobs:
         if: steps.decide.outputs.publish == 'true'
         uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
         with:
-          # Matches mops-test.yml: `mops publish` runs the tests, which need the dfx replica.
+          # Matches mops-test.yml: the signing tests need the dfx replica, which only mops 2.x supports.
           mops-version: 2.24.0
           identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
@@ -86,9 +86,17 @@ jobs:
         if: steps.decide.outputs.publish == 'true'
         run: mops install
 
+      - name: Test
+        if: steps.decide.outputs.publish == 'true'
+        # Same split as mops-test.yml. `mops publish` would run every test file on one replica,
+        # and neither replica passes both.
+        run: |
+          mops test --replica dfx Call
+          mops test --replica pocket-ic HttpRequest
+
       - name: Publish
         if: steps.decide.outputs.publish == 'true'
-        run: mops publish
+        run: mops publish --no-test
 
       - name: Tag release
         if: steps.decide.outputs.publish == 'true'

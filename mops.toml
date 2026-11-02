@@ -1,6 +1,6 @@
 [package]
 name = "ic"
-version = "5.0.0"
+version = "6.0.0"
 description = "IC management canister interface (aaaaa-aa)"
 repository = "https://github.com/caffeinelabs/mops-ic"
 keywords = ["ic", "types", "interface", "http"]
@@ -10,10 +10,11 @@ license = "MIT"
 core = "2.5.0"
 
 [requirements]
-moc = "1.4.0"
+moc = "2.1.0"
 
 [toolchain]
 moc = "2.1.0"
+pocket-ic = "16.1.0"
 
 [dev-dependencies]
 test = "2.1.2"
