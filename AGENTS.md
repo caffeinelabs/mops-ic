@@ -26,7 +26,7 @@ CI (`.github/workflows/mops-test.yml`) runs both on push to `master` and on pull
 
 - **`src/Types.mo` is generated — never hand-edit it.** It carries a `// This is a generated Motoko binding.` header. Add helpers to `src/lib.mo` or a new sibling module instead. See `REGENERATING.md` for the full regeneration flow.
 - Regeneration produces `PascalCase` type names (field and method names stay `snake_case`) via `scripts/pascal_types.py`. Regenerating requires `didc` ≥ 0.6.x.
-- Tool versions are pinned in `mops.toml`: toolchain `moc = 2.1.0` and `pocket-ic = 16.1.0`, minimum requirement `moc = 2.1.0` (`Prim.costHttpRequestV2`).
+- Tool versions are pinned in `mops.toml`: toolchain `moc = 2.2.1` and `pocket-ic = 16.1.0`, minimum requirement `moc = 2.1.0` (`Prim.costHttpRequestV2`).
 - Every system API `src/Call.mo` calls is imported into each canister that imports the module, used or not, and the canister fails to install on replicas without it. `Prim.costHttpRequestV2` is already such a requirement; avoid adding more, such as `Prim.subnetSelfNodeCount`.
 - `[moc].args` in `mops.toml` sets compiler flags (e.g. `-W=M0223,M0236,M0237`); keep them when running `moc` manually. `moc` 2.0 rejects `--default-persistent-actors` (actors are persistent by default).
 - The public consumer pattern is `import { ic } "mo:ic";` and `import IC "mo:ic/Types";` — stable across regenerations, don't change casually.
